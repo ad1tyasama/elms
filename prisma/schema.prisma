@@ -1,0 +1,157 @@
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+model Course {
+  id String @id @default(uuid())
+  userId String
+  title String @db.Text
+  description String? @db.Text
+  imageUrl String? @db.Text
+  isPublished Boolean @default(false)
+
+  categoryId String?
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  tests Test[]
+  chapters Chapter[]
+  attachments Attachment[]
+  enrollments Enrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@fulltext([title])
+}
+
+model Category {
+  id String @id @default(uuid())
+  name String @unique
+  courses Course[]
+}
+
+model Attachment {
+  id String @id @default(uuid())
+  name String
+  url String @db.Text
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courseId])
+}
+
+model Chapter {
+  id String @id @default(uuid())
+  title String
+  description String? @db.Text
+  videoUrl String? @db.Text
+  position Int
+  isPublished Boolean @default(false)
+  isFree Boolean @default(false)
+
+  muxData MuxData?
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  userProgress UserProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courseId])
+}
+
+model MuxData {
+  id String @id @default(uuid())
+  assetId String
+  playbackId String?
+
+  chapterId String @unique
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+}
+
+model UserProgress {
+  id String @id @default(uuid())
+  userId String
+
+  chapterId String
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  isCompleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chapterId])
+  @@unique([userId, chapterId])
+}
+
+model Enrollment {
+  id String @id @default(uuid())
+  userId String
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model Test {
+  id String @id @default(uuid())
+  title String
+  position Int
+  isPublished Boolean @default(false)
+  
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  variants Variant[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courseId])
+}
+
+model Variant {
+  id String @id @default(uuid())
+  title String
+  isCorrect Boolean @default(false)
+
+  testId String
+  test Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+}
+
+// Define the FolderId model
+model FolderId {
+  id     String   @id @default(uuid())
+  name   String?
+  videos GDVideo[] // Define the opposite relation
+}
+
+// Define the GDVideo model
+model GDVideo {
+  id        String   @id @default(uuid())
+  name      String?
+  folderId  String?
+  folder    FolderId? @relation(fields: [folderId], references: [id])
+}
